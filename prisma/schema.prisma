@@ -1,0 +1,176 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 Int                  @id @default(autoincrement())
+  username           String               @unique
+  email              String?              @unique
+  role               String
+  profiles           Profile[]
+  feedbacks          Feedback[]
+  progresses         Progress[]
+  sessions           Session[]            @relation("UserSessions")
+  userParticipations UserParticipations[] @relation(name: "UserParticipations")
+  participations     Session[]            @relation("UserParticipations")
+  integrations       Integration[]
+  achievements       UserAchievements[]   @relation("UserAchievements")
+  UserSessions       UserSessions[]
+  OAuthCredentials   OAuthCredential[]
+}
+
+model Profile {
+  id     Int     @id @default(autoincrement())
+  userId Int
+  bio    String?
+  user   User    @relation(fields: [userId], references: [id])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  content   String
+  category  String
+  userId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Tutorial {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String
+  category    String
+  documents   Document[]
+  progresses  Progress[]
+  quizzes     Quiz[]
+}
+
+model Progress {
+  id         Int      @id @default(autoincrement())
+  tutorialId Int
+  userId     Int
+  status     String
+  lastAccess DateTime @default(now())
+  tutorial   Tutorial @relation(fields: [tutorialId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id                 Int                  @id @default(autoincrement())
+  title              String
+  description        String
+  startTime          DateTime
+  endTime            DateTime?
+  participants       User[]               @relation("UserParticipations")
+  users              User[]               @relation("UserSessions")
+  userSessions       UserSessions[]
+  UserParticipations UserParticipations[]
+  CollaborationSessions CollaborationSession[]
+}
+
+model Achievement {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String
+  criteria    String
+  users       UserAchievements[] @relation("UserAchievements")
+}
+
+model Integration {
+  id          Int     @id @default(autoincrement())
+  userId      Int
+  service     String
+  externalId  String
+  accessToken String?
+  user        User    @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  id         Int       @id @default(autoincrement())
+  tutorialId Int?
+  title      String
+  content    String
+  category   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tutorial   Tutorial? @relation(fields: [tutorialId], references: [id])
+}
+
+model Quiz {
+  id          Int       @id @default(autoincrement())
+  tutorialId  Int
+  question    String
+  options     String[]
+  correctOption Int
+  tutorial    Tutorial @relation(fields: [tutorialId], references: [id])
+}
+
+model CollaborationSession {
+  id          Int       @id @default(autoincrement())
+  sessionId   Int
+  externalUrl String
+  session     Session   @relation(fields: [sessionId], references: [id])
+}
+
+model CustomCommand {
+  id          Int       @id @default(autoincrement())
+  command     String
+  description String
+  action      String
+}
+
+model Documentation {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OAuthCredential {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  service     String
+  accessToken String
+  refreshToken String?
+  expiresIn   Int
+  tokenType   String
+  scope       String?
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+// Many-to-many relationship helpers
+model UserSessions {
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+  role      String? // Optional field to specify the user's role in the session
+
+  @@id([userId, sessionId])
+}
+
+model UserParticipations {
+  user      User    @relation(fields: [userId], references: [id], name: "UserParticipations")
+  userId    Int
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+
+  @@id([userId, sessionId])
+}
+
+model UserAchievements {
+  user          User        @relation(name: "UserAchievements", fields: [userId], references: [id])
+  userId        Int
+  achievement   Achievement @relation(name: "UserAchievements", fields: [achievementId], references: [id])
+  achievementId Int
+  awardedAt     DateTime    @default(now())
+
+  @@id([userId, achievementId])
+}
